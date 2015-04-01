@@ -101,11 +101,16 @@ public class MainActivity extends OKActivity {
             return POSITION_NONE;
         }
     }
-
-    public boolean moveToolbar(int offset) {
+    
+    private void checkToolbarSize() {
         if (toolbarHeight == 0) {
             toolbarHeight = toolbar.getHeight();
         }
+    }
+
+    public boolean moveToolbar(int offset) {
+        checkToolbarSize();
+        
         if (isShowAnimating || isHideAnimating) {
             return false;
         }
@@ -115,6 +120,8 @@ public class MainActivity extends OKActivity {
     }
 
     public boolean showToolbar() {
+        checkToolbarSize();
+        
         if (isShowAnimating) {
             return false;
         }
@@ -140,6 +147,8 @@ public class MainActivity extends OKActivity {
     }
     
     public boolean hideToolbar() {
+        checkToolbarSize();
+        
         if (isHideAnimating) {
             return false;
         }
@@ -159,4 +168,5 @@ public class MainActivity extends OKActivity {
 
         return false;
     }
+    
 }

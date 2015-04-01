@@ -52,8 +52,17 @@ public class FirstFragment extends OKFragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         recyclerView.setAdapter(adapter);
         recyclerView.setOnScrollListener(scrollListener);
+        
+        mStickyView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ((MainActivity) getActivity()).hideToolbar();
+                recyclerView.smoothScrollBy(0, getOriginOffset());
+                mStickyView.animate().translationY(0).start();
+            }
+        });
     }
-
+    
     private RecyclerView.OnScrollListener scrollListener = new RecyclerView.OnScrollListener() {
         @Override
         public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
