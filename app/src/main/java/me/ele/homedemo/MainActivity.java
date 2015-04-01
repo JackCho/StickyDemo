@@ -1,22 +1,29 @@
 package me.ele.homedemo;
 
+import android.animation.Animator;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.util.SparseArray;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+
+import me.ele.omniknight.OKActivity;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends OKActivity {
 
     private ViewPager viewPager;
     private Toolbar toolbar;
-    private boolean isToolbarVisible = true;
-    private int toolbarWidth;
     private int toolbarHeight;
+    private boolean isShowAnimating = false;
+    private boolean isHideAnimating = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,25 +31,32 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
 
         viewPager = (ViewPager) findViewById(R.id.viewpager);
-        viewPager.setAdapter(new MyAdapter(getSupportFragmentManager()));
-
-        toolbar = (Toolbar) findViewById(R.id.activity_main_toolbar);
-        toolbar.setTitle("Home Demo");
-
-        toolbar.inflateMenu(R.menu.menu_main);
+        final MyAdapter adapter = new MyAdapter(getSupportFragmentManager());
+        viewPager.setAdapter(adapter);
 
         viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                if (position == 0 && !isToolbarVisible) {
-                    
+                if (position == 0 && !isToolbarShown()) {
                     showToolbar();
+                    eventBus.post(new FirstFragment.FixUnderToolbarEvent());
                 }
             }
 
             @Override
             public void onPageSelected(int position) {
-
+                String title = null;
+                switch (position) {
+                    case 0:
+                        title = "首页";
+                        break;
+                    case 1:
+                    case 2:
+                    case 3:
+                        title = "页面" + position;
+                        break;
+                }
+                getSupportActionBar().setTitle(title);
             }
 
             @Override
@@ -50,23 +64,21 @@ public class MainActivity extends ActionBarActivity {
 
             }
         });
+
+        toolbar = (Toolbar) findViewById(R.id.activity_main_toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayOptions(ActionBar.DISPLAY_SHOW_TITLE);
     }
 
     private class MyAdapter extends FragmentStatePagerAdapter {
 
-        private SparseArray<Fragment> array;
-
         private MyAdapter(FragmentManager fm) {
             super(fm);
-            array = new SparseArray<>();
         }
 
         @Override
         public Fragment getItem(int position) {
-            Fragment fragment = array.get(position);
-            if (fragment != null) {
-                return fragment;
-            }
+            Fragment fragment = null;
             switch (position) {
                 case 0:
                     fragment = new FirstFragment();
@@ -74,10 +86,9 @@ public class MainActivity extends ActionBarActivity {
                 case 1:
                 case 2:
                 case 3:
-                    fragment = SecondFragment.newInstance("页面" + position);
+                    fragment = SecondFragment.newInstance(position);
                     break;
             }
-            array.put(position, fragment);
             return fragment;
         }
 
@@ -91,35 +102,61 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    public void moveToolbar(int offset) {
-        if (toolbarWidth == 0) {
-            toolbarWidth = toolbar.getWidth();
+    public boolean moveToolbar(int offset) {
+        if (toolbarHeight == 0) {
             toolbarHeight = toolbar.getHeight();
         }
-        if (offset <= 0) {
-            showToolbar();
-        } else if (offset < toolbar.getHeight()) {
-            toolbar.setTranslationY(-offset);
-        } else {
-            hideToolbar();
+        if (isShowAnimating || isHideAnimating) {
+            return false;
         }
-
+        
+        toolbar.setTranslationY(-offset);
+        return true;
     }
 
-    public void showToolbar() {
-        if (isToolbarVisible) {
-            return;
+    public boolean showToolbar() {
+        if (isShowAnimating) {
+            return false;
         }
-        isToolbarVisible = true;
-        toolbar.animate().translationY(0).start();
-    }
+        
+        if (toolbar.getTranslationY() == -toolbarHeight) {
+            isShowAnimating = true;
+            toolbar.animate().translationY(0).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
 
-    public void hideToolbar() {
-        if (!isToolbarVisible) {
-            return;
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    isShowAnimating = false;
+                }
+            }).start();
+            return true;
         }
-        isToolbarVisible = false;
-        toolbar.animate().translationY(-toolbar.getHeight()).start();
-    }
 
+        return false;
+    }
+    
+    public boolean isToolbarShown() {
+        return toolbar.getTranslationY() == 0;
+    }
+    
+    public boolean hideToolbar() {
+        if (isHideAnimating) {
+            return false;
+        }
+
+        if (toolbar.getTranslationY() == 0) {
+            isHideAnimating = true;
+            toolbar.animate().translationY(-toolbarHeight).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    isHideAnimating = false;
+                }
+            }).start();
+            return true;
+        }
+
+        return false;
+    }
 }
