@@ -120,6 +120,11 @@ public class FirstFragment extends OKFragment {
             super.onScrolled(recyclerView, dx, dy);
             totalDeltaY += dy;
 
+            if (totalDeltaY == 0 && stickyView.getTranslationY() != getOriginOffset()) {
+                stickyView.animate().cancel();
+                stickyView.setTranslationY(getOriginOffset());
+            }
+            
             if (isAnimating) {
                 return;
             }
@@ -134,7 +139,6 @@ public class FirstFragment extends OKFragment {
             //当toolbar隐藏时下拉，动画显示toolbar，同时sticky view固定显示在toolbar之下
             if (dy < -5 && ((MainActivity) getActivity()).showToolbar()) {
                 isFixedUnderToolbar = true;
-//                stickyView.setTranslationY(getActionbarSize());
                 isAnimating = true;
                 stickyView.animate().translationY(getActionbarSize())
                         .setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
@@ -151,7 +155,6 @@ public class FirstFragment extends OKFragment {
             //当sticky view固定显示在toolbar之下时上拉，隐藏toolbar，同时sticky view置顶
             if (dy > 5 && isFixedUnderToolbar && ((MainActivity) getActivity()).hideToolbar()) {
                 isFixedUnderToolbar = false;
-//                stickyView.setTranslationY(0);
                 isAnimating = true;
                 stickyView.animate().translationY(0).setInterpolator(new DecelerateInterpolator())
                         .setListener(new SimpleAnimatorListener() {
@@ -193,7 +196,7 @@ public class FirstFragment extends OKFragment {
     private List<String> getData() {
         List<String> data = new ArrayList<>();
         
-        for (int i = 1; i < 10; i++) {
+        for (int i = 1; i < 20; i++) {
             data.add("测试数据" + i);
         }
 
