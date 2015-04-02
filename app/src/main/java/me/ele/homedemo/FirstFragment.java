@@ -12,7 +12,9 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -34,35 +36,84 @@ public class FirstFragment extends OKFragment {
     private boolean isAnimating = false;
 
     @InjectView(R.id.sticky)
-    protected TextView mStickyView;
+    protected TextView stickyView;
     @InjectView(R.id.recyclerview)
     protected RecyclerView recyclerView;
+
+    private HeaderViewRecyclerAdapter adapter;
+    private LinearLayout footer;
+    private View header;
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         setHasOptionsMenu(true);
-        mStickyView.setText("Sticky");
-        mStickyView.setTranslationY(getOriginOffset());
+        stickyView.setText("Sticky");
+        stickyView.setTranslationY(getOriginOffset());
 
-        View head = getActivity().getLayoutInflater().inflate(R.layout.head, null);
-        HeaderViewRecyclerAdapter adapter = new HeaderViewRecyclerAdapter(new MyAdapter(getData()));
-        adapter.addHeaderView(head);
+        header = getActivity().getLayoutInflater().inflate(R.layout.head, null);
+        adapter = new HeaderViewRecyclerAdapter(new MyAdapter(getData()));
+        adapter.addHeaderView(header);
 
-        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        final LinearLayoutManager layoutManager = new LinearLayoutManager(getActivity());
+        recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
         recyclerView.setOnScrollListener(scrollListener);
-        
-        mStickyView.setOnClickListener(new View.OnClickListener() {
+
+        stickyView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ((MainActivity) getActivity()).hideToolbar();
-                recyclerView.smoothScrollBy(0, getOriginOffset());
-                mStickyView.animate().translationY(0).start();
+                isAnimating = true;
+                addFooter();
+
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        if (!((MainActivity) getActivity()).isToolbarShown()) {
+                            isAnimating = false;
+                            return;
+                        }
+                        
+                        ((MainActivity) getActivity()).hideToolbar();
+                        ((LinearLayoutManager)recyclerView.getLayoutManager()).findFirstVisibleItemPosition();
+                        recyclerView.smoothScrollBy(0, getOriginOffset() - totalDeltaY);
+                        stickyView.animate().translationY(0).start();
+
+                        new Handler(Looper.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                isAnimating = false;
+                            }
+                        });
+                    }
+                });
             }
         });
+
     }
-    
+
+    private void addFooter() {
+        if (isFullScreen()) {
+            return;
+        }
+
+        int footerHeight = getFooterHeight();
+        footer = new LinearLayout(getActivity());
+        RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) footer.getLayoutParams();
+        if (params == null) {
+            params = new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, footerHeight);
+        }
+        footer.setLayoutParams(params);
+        adapter.addFooterView(footer);
+        adapter.notifyDataSetChanged();
+    }
+
+    private void removeFooter() {
+        adapter.removeFooterView(footer);
+        footer = null;
+    }
+
     private RecyclerView.OnScrollListener scrollListener = new RecyclerView.OnScrollListener() {
         @Override
         public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
@@ -72,20 +123,20 @@ public class FirstFragment extends OKFragment {
             if (isAnimating) {
                 return;
             }
-            
+
             //set sticky view's position
             int translationY = (getOriginOffset() - totalDeltaY) < 0 ? 0 : (getOriginOffset() - totalDeltaY);
             if (hasFixedLocation(translationY)) {
                 translationY = getActionbarSize();
             }
-            mStickyView.setTranslationY(translationY);
+            stickyView.setTranslationY(translationY);
 
             //当toolbar隐藏时下拉，动画显示toolbar，同时sticky view固定显示在toolbar之下
             if (dy < -5 && ((MainActivity) getActivity()).showToolbar()) {
                 isFixedUnderToolbar = true;
-//                mStickyView.setTranslationY(getActionbarSize());
+//                stickyView.setTranslationY(getActionbarSize());
                 isAnimating = true;
-                mStickyView.animate().translationY(getActionbarSize())
+                stickyView.animate().translationY(getActionbarSize())
                         .setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
                     @Override
                     public void onAnimationEnd(Animator animation) {
@@ -100,9 +151,9 @@ public class FirstFragment extends OKFragment {
             //当sticky view固定显示在toolbar之下时上拉，隐藏toolbar，同时sticky view置顶
             if (dy > 5 && isFixedUnderToolbar && ((MainActivity) getActivity()).hideToolbar()) {
                 isFixedUnderToolbar = false;
-//                mStickyView.setTranslationY(0);
+//                stickyView.setTranslationY(0);
                 isAnimating = true;
-                mStickyView.animate().translationY(0).setInterpolator(new DecelerateInterpolator())
+                stickyView.animate().translationY(0).setInterpolator(new DecelerateInterpolator())
                         .setListener(new SimpleAnimatorListener() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
@@ -117,6 +168,7 @@ public class FirstFragment extends OKFragment {
             //当滑动到顶部，toolbar移动到顶部
             if (totalDeltaY == 0 && ((MainActivity) getActivity()).moveToolbar(0)) {
                 isFixedUnderToolbar = false;
+                removeFooter();
                 return;
             }
 
@@ -140,7 +192,8 @@ public class FirstFragment extends OKFragment {
 
     private List<String> getData() {
         List<String> data = new ArrayList<>();
-        for (int i = 1; i < 30; i++) {
+        
+        for (int i = 1; i < 10; i++) {
             data.add("测试数据" + i);
         }
 
@@ -191,13 +244,6 @@ public class FirstFragment extends OKFragment {
     }
 
     private int getActionbarSize() {
-//        final TypedArray styledAttributes = getActivity().getTheme().obtainStyledAttributes(
-//                new int[]{android.R.attr.actionBarSize});
-//        try {
-//            return (int) styledAttributes.getDimension(0, 0);
-//        } finally {
-//            styledAttributes.recycle();
-//        }
         return dpToPx(56);
     }
 
@@ -215,12 +261,45 @@ public class FirstFragment extends OKFragment {
 
     public void onEvent(FixUnderToolbarEvent event) {
         isFixedUnderToolbar = true;
-        mStickyView.setTranslationY(getActionbarSize());
+        stickyView.setTranslationY(getActionbarSize());
     }
 
 
     public static final class FixUnderToolbarEvent {
 
+    }
 
+    private boolean isFullScreen() {
+        return getEstimateHeight() > getOneScreenScrollHeight();
+    }
+    
+    private int getEstimateHeight() {
+        int totalHeight = getHeaderHeight();
+        int itemCount = adapter.getItemCount();
+        for (int i = 1; i < itemCount; i++) {
+            View child = recyclerView.getChildAt(i);
+            if (child != null) {
+                totalHeight += child.getHeight();
+            } else {
+                totalHeight += recyclerView.getChildAt(1).getHeight();
+            }
+        }
+        return  totalHeight;
+    }
+    
+    private int getOneScreenScrollHeight() {
+        return getScreenHeight() + getHeaderHeight() - stickyView.getHeight();
+    }
+
+    private int getHeaderHeight() {
+        return header.getHeight();
+    }
+
+    private int getFooterHeight() {
+        return getOneScreenScrollHeight() - getEstimateHeight();
+    }
+    
+    private int getScreenHeight() {
+        return getActivity().getWindow().findViewById(Window.ID_ANDROID_CONTENT).getHeight();
     }
 }
