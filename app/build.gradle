@@ -14,7 +14,7 @@ apply plugin: 'maven'
 apply plugin: 'eradle'
 
 repositories {
-    github("eleme", "EMAndroidMavenCentral", "maven", "releases")
+    github("eleme", "EMAndroidMavenCentral", "me.ele_recyclerview_0.3.4", "releases")
 }
 
 android {
@@ -38,6 +38,6 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'me.ele:recyclerview:0.3.+'
+    compile 'me.ele:recyclerview:0.3.4'
     compile 'me.ele:omniknight:1.3.4'
 }

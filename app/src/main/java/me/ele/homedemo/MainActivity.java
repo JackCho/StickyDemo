@@ -1,6 +1,5 @@
 package me.ele.homedemo;
 
-import android.animation.Animator;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -8,8 +7,6 @@ import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
-import android.util.DisplayMetrics;
-import android.view.animation.DecelerateInterpolator;
 
 import me.ele.omniknight.OKActivity;
 
@@ -18,8 +15,6 @@ public class MainActivity extends OKActivity {
 
     private ViewPager viewPager;
     private Toolbar toolbar;
-    private boolean isShowAnimating = false;
-    private boolean isHideAnimating = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,10 +29,6 @@ public class MainActivity extends OKActivity {
         viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                if (position == 0 && !isToolbarTotalShown()) {
-                    reInitToolBarPosition();
-                    eventBus.post(new FirstFragment.FixUnderToolbarEvent());
-                }
             }
 
             @Override
@@ -48,7 +39,7 @@ public class MainActivity extends OKActivity {
                         title = "4条数据";
                         break;
                     case 1:
-                        title = "8条数据";
+                        title = "7条数据";
                         break;
                     case 2:
                         title = "20条数据";
@@ -85,7 +76,7 @@ public class MainActivity extends OKActivity {
                     fragment = FirstFragment.newInstance(4);
                     break;
                 case 1:
-                    fragment = FirstFragment.newInstance(8);
+                    fragment = FirstFragment.newInstance(7);
                     break;
                 case 2:
                     fragment = FirstFragment.newInstance(20);
@@ -105,91 +96,6 @@ public class MainActivity extends OKActivity {
         public int getItemPosition(Object object) {
             return POSITION_NONE;
         }
-    }
-    
-    private void reInitToolBarPosition() {
-        if (isShowAnimating) {
-            return;
-        }
-
-        isShowAnimating = true;
-        toolbar.animate().translationY(0).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
-
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                super.onAnimationEnd(animation);
-                isShowAnimating = false;
-            }
-        }).start();
-    }
-
-    public boolean moveToolbar(int offset) {
-        if (isShowAnimating || isHideAnimating) {
-            return false;
-        }
-
-        toolbar.setTranslationY(-offset);
-        return true;
-    }
-
-    public boolean showToolbar() {
-        if (isShowAnimating) {
-            return false;
-        }
-
-        if (isToolbarTotalGone()) {
-            isShowAnimating = true;
-            toolbar.animate().translationY(0).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
-
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    super.onAnimationEnd(animation);
-                    isShowAnimating = false;
-                }
-            }).start();
-            return true;
-        }
-
-        return false;
-    }
-
-    public boolean isToolbarTotalShown() {
-        return toolbar.getTranslationY() == 0;
-    }
-
-    public boolean isToolbarTotalGone() {
-        return toolbar.getTranslationY() == -getActionbarSize();
-    }
-
-    public boolean hideToolbar() {
-
-        if (isHideAnimating) {
-            return false;
-        }
-
-        if (!isToolbarTotalGone()) {
-            isHideAnimating = true;
-            toolbar.animate().translationY(-getActionbarSize()).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
-
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    super.onAnimationEnd(animation);
-                    isHideAnimating = false;
-                }
-            }).start();
-            return true;
-        }
-
-        return false;
-    }
-
-    private int getActionbarSize() {
-        return dpToPx(56);
-    }
-
-    private int dpToPx(int dp) {
-        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
-        return (int) (dp * displayMetrics.density + 0.5);
     }
 
 }

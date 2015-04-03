@@ -1,10 +1,15 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".MainActivity">
 
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/activity_main_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="#ffffff" />
 
     <android.support.v4.view.ViewPager
         android:id="@+id/viewpager"
@@ -12,11 +17,4 @@
         android:layout_height="match_parent" />
 
 
-    <android.support.v7.widget.Toolbar
-        android:id="@+id/activity_main_toolbar"
-        android:layout_width="match_parent"
-        android:background="#ffffff"
-        android:layout_height="?attr/actionBarSize" />
-
-
-</FrameLayout>
+</LinearLayout>

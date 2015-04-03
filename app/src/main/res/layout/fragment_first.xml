@@ -3,17 +3,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <android.support.v7.widget.RecyclerView
+    <me.ele.components.recyclerview.EMRecyclerView
         android:id="@+id/recyclerview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:clipToPadding="false"
         android:animateLayoutChanges="false"
-        android:paddingTop="?attr/actionBarSize" />
+        android:clipToPadding="false" />
 
     <TextView
         android:id="@+id/sticky"
-        android:background="#50000000"
-        style="@style/Sticky" />
+        style="@style/Sticky"
+        android:background="#50000000" />
 
 </FrameLayout>
