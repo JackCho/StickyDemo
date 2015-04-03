@@ -27,6 +27,7 @@ public class MainActivity extends OKActivity {
         setContentView(R.layout.activity_main);
 
         viewPager = (ViewPager) findViewById(R.id.viewpager);
+        viewPager.setOffscreenPageLimit(4);
         final MyAdapter adapter = new MyAdapter(getSupportFragmentManager());
         viewPager.setAdapter(adapter);
 
@@ -44,10 +45,14 @@ public class MainActivity extends OKActivity {
                 String title = null;
                 switch (position) {
                     case 0:
-                        title = "首页";
+                        title = "4条数据";
                         break;
                     case 1:
+                        title = "8条数据";
+                        break;
                     case 2:
+                        title = "20条数据";
+                        break;
                     case 3:
                         title = "页面" + position;
                         break;
@@ -77,10 +82,14 @@ public class MainActivity extends OKActivity {
             Fragment fragment = null;
             switch (position) {
                 case 0:
-                    fragment = new FirstFragment();
+                    fragment = FirstFragment.newInstance(4);
                     break;
                 case 1:
+                    fragment = FirstFragment.newInstance(8);
+                    break;
                 case 2:
+                    fragment = FirstFragment.newInstance(20);
+                    break;
                 case 3:
                     fragment = SecondFragment.newInstance(position);
                     break;

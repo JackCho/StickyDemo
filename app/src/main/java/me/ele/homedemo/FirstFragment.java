@@ -8,9 +8,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -50,9 +47,21 @@ public class FirstFragment extends OKFragment {
 
     private Handler handler;
 
+    private int count;
+
+    public static FirstFragment newInstance(int count) {
+        FirstFragment fragment = new FirstFragment();
+        Bundle args = new Bundle();
+        args.putInt("count", count);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        count = getArguments().getInt("count");
 
         handler = new Handler(Looper.getMainLooper());
 
@@ -63,7 +72,7 @@ public class FirstFragment extends OKFragment {
         stickyView.setOnClickListener(clickListener);
 
         header = getActivity().getLayoutInflater().inflate(R.layout.head, null);
-        realAdapter = new MyAdapter(getData(20));
+        realAdapter = new MyAdapter(getData());
         adapter = new HeaderViewRecyclerAdapter(realAdapter);
         adapter.addHeaderView(header);
 
@@ -81,12 +90,12 @@ public class FirstFragment extends OKFragment {
 
     }
 
+    private void removeFooter() {
+        adapter.removeFooterView(footer);
+    }
+
     private void addFooter() {
         if (isFullScreen()) {
-            return;
-        }
-
-        if (footer != null) {
             return;
         }
 
@@ -199,10 +208,10 @@ public class FirstFragment extends OKFragment {
         }
     };
 
-    private List<String> getData(int size) {
+    private List<String> getData() {
         List<String> data = new ArrayList<>();
 
-        for (int i = 1; i < size + 1; i++) {
+        for (int i = 1; i < count + 1; i++) {
             data.add("测试数据" + i);
         }
 
@@ -232,7 +241,7 @@ public class FirstFragment extends OKFragment {
         public int getItemCount() {
             return list.size();
         }
-        
+
         public void notifyDataSetChanged(List<String> list) {
             this.list = list;
             notifyDataSetChanged();
@@ -248,25 +257,25 @@ public class FirstFragment extends OKFragment {
             textView = (TextView) itemView.findViewById(android.R.id.text1);
         }
     }
-    
+
     private boolean hideToolbar() {
-        return ((MainActivity)getActivity()).hideToolbar();
+        return ((MainActivity) getActivity()).hideToolbar();
     }
 
     private boolean showToolbar() {
-        return ((MainActivity)getActivity()).showToolbar();
+        return ((MainActivity) getActivity()).showToolbar();
     }
 
     private boolean moveToolbar(int offset) {
-        return ((MainActivity)getActivity()).moveToolbar(offset);
+        return ((MainActivity) getActivity()).moveToolbar(offset);
     }
 
     private boolean isToolbarTotalShown() {
-        return ((MainActivity)getActivity()).isToolbarTotalShown();
+        return ((MainActivity) getActivity()).isToolbarTotalShown();
     }
 
     private boolean isToolbarTotalGone() {
-        return ((MainActivity)getActivity()).isToolbarTotalGone();
+        return ((MainActivity) getActivity()).isToolbarTotalGone();
     }
 
     private boolean hasFixedLocation(int translationY) {
@@ -284,30 +293,6 @@ public class FirstFragment extends OKFragment {
     private int dpToPx(int dp) {
         DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
         return (int) (dp * displayMetrics.density + 0.5);
-    }
-
-    @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        inflater.inflate(R.menu.menu_main, menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.four_item:
-                realAdapter.notifyDataSetChanged(getData(4));
-                break;
-            case R.id.eight_item:
-                realAdapter.notifyDataSetChanged(getData(8));
-                break;
-            case R.id.twenty_item:
-                realAdapter.notifyDataSetChanged(getData(20));
-                break;
-        }
-        footer = null;
-        addFooter();
-        return super.onOptionsItemSelected(item);
     }
 
     public void onEvent(FixUnderToolbarEvent event) {
