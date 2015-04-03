@@ -3,8 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".MainActivity">
     <item
-        android:id="@+id/action_settings"
+        android:id="@+id/four_item"
         android:orderInCategory="100"
-        android:title="@string/action_settings"
+        android:title="4"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/eight_item"
+        android:orderInCategory="100"
+        android:title="8"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/twenty_item"
+        android:orderInCategory="100"
+        android:title="20"
         app:showAsAction="never" />
 </menu>

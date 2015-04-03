@@ -7,11 +7,8 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
-import android.util.SparseArray;
-import android.view.animation.AccelerateInterpolator;
+import android.util.DisplayMetrics;
 import android.view.animation.DecelerateInterpolator;
 
 import me.ele.omniknight.OKActivity;
@@ -21,7 +18,6 @@ public class MainActivity extends OKActivity {
 
     private ViewPager viewPager;
     private Toolbar toolbar;
-    private int toolbarHeight;
     private boolean isShowAnimating = false;
     private boolean isHideAnimating = false;
 
@@ -37,7 +33,7 @@ public class MainActivity extends OKActivity {
         viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-                if (position == 0 && !isToolbarShown()) {
+                if (position == 0 && !isToolbarTotalShown()) {
                     showToolbar();
                     eventBus.post(new FirstFragment.FixUnderToolbarEvent());
                 }
@@ -101,32 +97,22 @@ public class MainActivity extends OKActivity {
             return POSITION_NONE;
         }
     }
-    
-    private void checkToolbarSize() {
-        if (toolbarHeight == 0) {
-            toolbarHeight = toolbar.getHeight();
-        }
-    }
 
     public boolean moveToolbar(int offset) {
-        checkToolbarSize();
-        
         if (isShowAnimating || isHideAnimating) {
             return false;
         }
-        
+
         toolbar.setTranslationY(-offset);
         return true;
     }
 
     public boolean showToolbar() {
-        checkToolbarSize();
-        
         if (isShowAnimating) {
             return false;
         }
-        
-        if (toolbar.getTranslationY() == -toolbarHeight) {
+
+        if (isToolbarTotalGone()) {
             isShowAnimating = true;
             toolbar.animate().translationY(0).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
 
@@ -141,21 +127,24 @@ public class MainActivity extends OKActivity {
 
         return false;
     }
-    
-    public boolean isToolbarShown() {
+
+    public boolean isToolbarTotalShown() {
         return toolbar.getTranslationY() == 0;
     }
-    
+
+    public boolean isToolbarTotalGone() {
+        return toolbar.getTranslationY() == -getActionbarSize();
+    }
+
     public boolean hideToolbar() {
-        checkToolbarSize();
-        
+
         if (isHideAnimating) {
             return false;
         }
 
-        if (toolbar.getTranslationY() == 0) {
+        if (!isToolbarTotalGone()) {
             isHideAnimating = true;
-            toolbar.animate().translationY(-toolbarHeight).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
+            toolbar.animate().translationY(-getActionbarSize()).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
 
                 @Override
                 public void onAnimationEnd(Animator animation) {
@@ -168,5 +157,14 @@ public class MainActivity extends OKActivity {
 
         return false;
     }
-    
+
+    private int getActionbarSize() {
+        return dpToPx(56);
+    }
+
+    private int dpToPx(int dp) {
+        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+        return (int) (dp * displayMetrics.density + 0.5);
+    }
+
 }

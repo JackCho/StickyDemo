@@ -10,10 +10,12 @@ import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.Interpolator;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -31,6 +33,7 @@ import roboguice.inject.ContentView;
 @ContentView(R.layout.fragment_first)
 public class FirstFragment extends OKFragment {
 
+    private static final int THRESHOLD = 10;
     private int totalDeltaY = 0;
     private boolean isFixedUnderToolbar = false;
     private boolean isAnimating = false;
@@ -41,18 +44,27 @@ public class FirstFragment extends OKFragment {
     protected RecyclerView recyclerView;
 
     private HeaderViewRecyclerAdapter adapter;
+    private MyAdapter realAdapter;
     private LinearLayout footer;
     private View header;
+
+    private Handler handler;
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        handler = new Handler(Looper.getMainLooper());
+
         setHasOptionsMenu(true);
+
         stickyView.setText("Sticky");
         stickyView.setTranslationY(getOriginOffset());
+        stickyView.setOnClickListener(clickListener);
 
         header = getActivity().getLayoutInflater().inflate(R.layout.head, null);
-        adapter = new HeaderViewRecyclerAdapter(new MyAdapter(getData()));
+        realAdapter = new MyAdapter(getData(20));
+        adapter = new HeaderViewRecyclerAdapter(realAdapter);
         adapter.addHeaderView(header);
 
         final LinearLayoutManager layoutManager = new LinearLayoutManager(getActivity());
@@ -60,34 +72,10 @@ public class FirstFragment extends OKFragment {
         recyclerView.setAdapter(adapter);
         recyclerView.setOnScrollListener(scrollListener);
 
-        stickyView.setOnClickListener(new View.OnClickListener() {
+        handler.post(new Runnable() {
             @Override
-            public void onClick(View v) {
-                isAnimating = true;
+            public void run() {
                 addFooter();
-
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        if (!((MainActivity) getActivity()).isToolbarShown()) {
-                            isAnimating = false;
-                            return;
-                        }
-                        
-                        ((MainActivity) getActivity()).hideToolbar();
-                        ((LinearLayoutManager)recyclerView.getLayoutManager()).findFirstVisibleItemPosition();
-                        recyclerView.smoothScrollBy(0, getOriginOffset() - totalDeltaY);
-                        stickyView.animate().translationY(0).start();
-
-                        new Handler(Looper.getMainLooper()).post(new Runnable() {
-                            @Override
-                            public void run() {
-                                isAnimating = false;
-                            }
-                        });
-                    }
-                });
             }
         });
 
@@ -98,20 +86,18 @@ public class FirstFragment extends OKFragment {
             return;
         }
 
-        int footerHeight = getFooterHeight();
+        if (footer != null) {
+            return;
+        }
+
         footer = new LinearLayout(getActivity());
         RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) footer.getLayoutParams();
         if (params == null) {
-            params = new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, footerHeight);
+            params = new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, getFooterHeight());
         }
         footer.setLayoutParams(params);
         adapter.addFooterView(footer);
         adapter.notifyDataSetChanged();
-    }
-
-    private void removeFooter() {
-        adapter.removeFooterView(footer);
-        footer = null;
     }
 
     private RecyclerView.OnScrollListener scrollListener = new RecyclerView.OnScrollListener() {
@@ -120,11 +106,12 @@ public class FirstFragment extends OKFragment {
             super.onScrolled(recyclerView, dx, dy);
             totalDeltaY += dy;
 
+            //防止动画执行过程中，影响sticky view的位置。bug:快速滑动有抖动
             if (totalDeltaY == 0 && stickyView.getTranslationY() != getOriginOffset()) {
                 stickyView.animate().cancel();
                 stickyView.setTranslationY(getOriginOffset());
             }
-            
+
             if (isAnimating) {
                 return;
             }
@@ -137,7 +124,7 @@ public class FirstFragment extends OKFragment {
             stickyView.setTranslationY(translationY);
 
             //当toolbar隐藏时下拉，动画显示toolbar，同时sticky view固定显示在toolbar之下
-            if (dy < -5 && ((MainActivity) getActivity()).showToolbar()) {
+            if (dy < -THRESHOLD && showToolbar() && totalDeltaY > getHeaderHeight()) {
                 isFixedUnderToolbar = true;
                 isAnimating = true;
                 stickyView.animate().translationY(getActionbarSize())
@@ -148,12 +135,11 @@ public class FirstFragment extends OKFragment {
                         isAnimating = false;
                     }
                 }).start();
-
                 return;
             }
 
             //当sticky view固定显示在toolbar之下时上拉，隐藏toolbar，同时sticky view置顶
-            if (dy > 5 && isFixedUnderToolbar && ((MainActivity) getActivity()).hideToolbar()) {
+            if (dy > THRESHOLD && isFixedUnderToolbar && totalDeltaY >= getOriginOffset() && hideToolbar()) {
                 isFixedUnderToolbar = false;
                 isAnimating = true;
                 stickyView.animate().translationY(0).setInterpolator(new DecelerateInterpolator())
@@ -164,24 +150,22 @@ public class FirstFragment extends OKFragment {
                                 isAnimating = false;
                             }
                         }).start();
-
                 return;
             }
 
             //当滑动到顶部，toolbar移动到顶部
-            if (totalDeltaY == 0 && ((MainActivity) getActivity()).moveToolbar(0)) {
+            if (totalDeltaY == 0 && moveToolbar(0)) {
                 isFixedUnderToolbar = false;
-                removeFooter();
                 return;
             }
 
             //当toolbar与sticky view相接时，同时移动
             if (translationY < getActionbarSize()) {
-                if (dy < 0 && ((MainActivity) getActivity()).isToolbarShown()) {
+                if (dy < 0 && isToolbarTotalShown()) {
                     return;
                 }
 
-                ((MainActivity) getActivity()).moveToolbar(getActionbarSize() - translationY);
+                moveToolbar(getActionbarSize() - translationY);
                 isFixedUnderToolbar = false;
             }
         }
@@ -193,10 +177,32 @@ public class FirstFragment extends OKFragment {
         }
     };
 
-    private List<String> getData() {
+    private View.OnClickListener clickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            if (isToolbarTotalGone()) {
+                return;
+            }
+
+            isAnimating = true;
+            hideToolbar();
+            int duration = computeScrollDuration(0, getOriginOffset() - totalDeltaY, 0, 0);
+            recyclerView.smoothScrollBy(0, getOriginOffset() - totalDeltaY);
+            stickyView.animate().translationY(0).setInterpolator(sQuinticInterpolator).setDuration(duration).setListener(new SimpleAnimatorListener() {
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    isAnimating = false;
+                }
+            }).start();
+        }
+    };
+
+    private List<String> getData(int size) {
         List<String> data = new ArrayList<>();
-        
-        for (int i = 1; i < 20; i++) {
+
+        for (int i = 1; i < size + 1; i++) {
             data.add("测试数据" + i);
         }
 
@@ -226,6 +232,11 @@ public class FirstFragment extends OKFragment {
         public int getItemCount() {
             return list.size();
         }
+        
+        public void notifyDataSetChanged(List<String> list) {
+            this.list = list;
+            notifyDataSetChanged();
+        }
     }
 
     private class MyViewHolder extends RecyclerView.ViewHolder {
@@ -237,9 +248,29 @@ public class FirstFragment extends OKFragment {
             textView = (TextView) itemView.findViewById(android.R.id.text1);
         }
     }
+    
+    private boolean hideToolbar() {
+        return ((MainActivity)getActivity()).hideToolbar();
+    }
+
+    private boolean showToolbar() {
+        return ((MainActivity)getActivity()).showToolbar();
+    }
+
+    private boolean moveToolbar(int offset) {
+        return ((MainActivity)getActivity()).moveToolbar(offset);
+    }
+
+    private boolean isToolbarTotalShown() {
+        return ((MainActivity)getActivity()).isToolbarTotalShown();
+    }
+
+    private boolean isToolbarTotalGone() {
+        return ((MainActivity)getActivity()).isToolbarTotalGone();
+    }
 
     private boolean hasFixedLocation(int translationY) {
-        return isFixedUnderToolbar && translationY < getActionbarSize();
+        return isFixedUnderToolbar && translationY < getActionbarSize() && isToolbarTotalShown();
     }
 
     private int getOriginOffset() {
@@ -259,7 +290,24 @@ public class FirstFragment extends OKFragment {
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.menu_main, menu);
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.four_item:
+                realAdapter.notifyDataSetChanged(getData(4));
+                break;
+            case R.id.eight_item:
+                realAdapter.notifyDataSetChanged(getData(8));
+                break;
+            case R.id.twenty_item:
+                realAdapter.notifyDataSetChanged(getData(20));
+                break;
+        }
+        footer = null;
+        addFooter();
+        return super.onOptionsItemSelected(item);
     }
 
     public void onEvent(FixUnderToolbarEvent event) {
@@ -275,7 +323,7 @@ public class FirstFragment extends OKFragment {
     private boolean isFullScreen() {
         return getEstimateHeight() > getOneScreenScrollHeight();
     }
-    
+
     private int getEstimateHeight() {
         int totalHeight = getHeaderHeight();
         int itemCount = adapter.getItemCount();
@@ -287,9 +335,9 @@ public class FirstFragment extends OKFragment {
                 totalHeight += recyclerView.getChildAt(1).getHeight();
             }
         }
-        return  totalHeight;
+        return totalHeight;
     }
-    
+
     private int getOneScreenScrollHeight() {
         return getScreenHeight() + getHeaderHeight() - stickyView.getHeight();
     }
@@ -301,8 +349,44 @@ public class FirstFragment extends OKFragment {
     private int getFooterHeight() {
         return getOneScreenScrollHeight() - getEstimateHeight();
     }
-    
+
     private int getScreenHeight() {
         return getActivity().getWindow().findViewById(Window.ID_ANDROID_CONTENT).getHeight();
     }
+
+    private int computeScrollDuration(int dx, int dy, int vx, int vy) {
+        final int absDx = Math.abs(dx);
+        final int absDy = Math.abs(dy);
+        final boolean horizontal = absDx > absDy;
+        final int velocity = (int) Math.sqrt(vx * vx + vy * vy);
+        final int delta = (int) Math.sqrt(dx * dx + dy * dy);
+        final int containerSize = horizontal ? recyclerView.getWidth() : recyclerView.getHeight();
+        final int halfContainerSize = containerSize / 2;
+        final float distanceRatio = Math.min(1.f, 1.f * delta / containerSize);
+        final float distance = halfContainerSize + halfContainerSize *
+                distanceInfluenceForSnapDuration(distanceRatio);
+
+        final int duration;
+        if (velocity > 0) {
+            duration = 4 * Math.round(1000 * Math.abs(distance / velocity));
+        } else {
+            float absDelta = (float) (horizontal ? absDx : absDy);
+            duration = (int) (((absDelta / containerSize) + 1) * 300);
+        }
+        return Math.min(duration, 2000);
+    }
+
+    private float distanceInfluenceForSnapDuration(float f) {
+        f -= 0.5f; // center the values about 0.
+        f *= 0.3f * Math.PI / 2.0f;
+        return (float) Math.sin(f);
+    }
+
+    private static final Interpolator sQuinticInterpolator = new Interpolator() {
+        public float getInterpolation(float t) {
+            t -= 1.0f;
+            return t * t * t * t * t + 1.0f;
+        }
+    };
+
 }
