@@ -34,7 +34,7 @@ public class MainActivity extends OKActivity {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
                 if (position == 0 && !isToolbarTotalShown()) {
-                    showToolbar();
+                    reInitToolBarPosition();
                     eventBus.post(new FirstFragment.FixUnderToolbarEvent());
                 }
             }
@@ -96,6 +96,22 @@ public class MainActivity extends OKActivity {
         public int getItemPosition(Object object) {
             return POSITION_NONE;
         }
+    }
+    
+    private void reInitToolBarPosition() {
+        if (isShowAnimating) {
+            return;
+        }
+
+        isShowAnimating = true;
+        toolbar.animate().translationY(0).setInterpolator(new DecelerateInterpolator()).setListener(new SimpleAnimatorListener() {
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                super.onAnimationEnd(animation);
+                isShowAnimating = false;
+            }
+        }).start();
     }
 
     public boolean moveToolbar(int offset) {
